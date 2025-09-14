@@ -1,0 +1,567 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>app: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">app/main.go (48.3%)</option>
+				
+				<option value="file1">app/pkg/hashring/main.go (100.0%)</option>
+				
+				<option value="file2">app/pkg/setup/main.go (95.2%)</option>
+				
+				<option value="file3">app/pkg/sharding/main.go (93.8%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "app/pkg/interfaces"
+        "app/pkg/setup"
+        "app/pkg/sharding"
+        "io"
+        "log"
+        "net/http"
+        "net/url"
+        "os"
+        "strconv"
+
+        "github.com/prometheus/client_golang/prometheus"
+        "github.com/prometheus/client_golang/prometheus/collectors"
+        "github.com/prometheus/client_golang/prometheus/promhttp"
+)
+
+// ProxyServer encapsula as dependências e configurações do servidor
+type ProxyServer struct {
+        router          interfaces.ShardRouter
+        metricsRecorder interfaces.MetricsRecorder
+        port            string
+}
+
+// PrometheusMetricsRecorder implementa a interface MetricsRecorder
+type PrometheusMetricsRecorder struct {
+        requestsCounter prometheus.CounterVec
+        responseCounter prometheus.CounterVec
+}
+
+// Garantir que PrometheusMetricsRecorder implementa a interface
+var _ interfaces.MetricsRecorder = (*PrometheusMetricsRecorder)(nil)
+
+func (pm *PrometheusMetricsRecorder) RecordRequest(shard string) <span class="cov8" title="1">{
+        pm.requestsCounter.WithLabelValues(shard).Inc()
+}</span>
+
+func (pm *PrometheusMetricsRecorder) RecordResponse(shard string, statusCode int) <span class="cov8" title="1">{
+        pm.responseCounter.WithLabelValues(shard, strconv.Itoa(statusCode)).Inc()
+}</span>
+
+// NewPrometheusMetricsRecorder cria uma nova instância do recorder de métricas
+func NewPrometheusMetricsRecorder() *PrometheusMetricsRecorder <span class="cov8" title="1">{
+        requestsCounter := prometheus.NewCounterVec(
+                prometheus.CounterOpts{
+                        Name: "shard_router_requests_total",
+                        Help: "Total number of HTTP requests",
+                },
+                []string{"shard"},
+        )
+        responseCounter := prometheus.NewCounterVec(
+                prometheus.CounterOpts{
+                        Name: "shard_router_responses_total",
+                        Help: "Total number of HTTP responses",
+                },
+                []string{"shard", "status"},
+        )
+
+        return &amp;PrometheusMetricsRecorder{
+                requestsCounter: *requestsCounter,
+                responseCounter: *responseCounter,
+        }
+}</span>
+
+// NewProxyServer cria uma nova instância do servidor proxy
+func NewProxyServer(port string) *ProxyServer <span class="cov0" title="0">{
+        shardingKey := os.Getenv("SHARDING_KEY")
+        if shardingKey == "" </span><span class="cov0" title="0">{
+                log.Fatal("SHARDING_KEY environment variable is required")
+        }</span>
+
+        <span class="cov0" title="0">router := sharding.NewShardRouter(shardingKey)
+        metricsRecorder := NewPrometheusMetricsRecorder()
+
+        return &amp;ProxyServer{
+                router:          router,
+                metricsRecorder: metricsRecorder,
+                port:            port,
+        }</span>
+}
+
+// ProxyHandler implementa a interface ProxyHandler
+type ProxyHandler struct {
+        router          interfaces.ShardRouter
+        metricsRecorder interfaces.MetricsRecorder
+}
+
+// Garantir que ProxyHandler implementa a interface
+var _ interfaces.ProxyHandler = (*ProxyHandler)(nil)
+
+// ServeHTTP implementa o handler HTTP para o proxy
+func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        shardKey := ph.router.GetShardingKey(r)
+        shardURL := ph.router.GetShardHost(shardKey)
+
+        targetURL, err := url.Parse(shardURL + r.URL.Path)
+        if err != nil </span><span class="cov8" title="1">{
+                http.Error(w, "Invalid target URL", http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov8" title="1">ph.metricsRecorder.RecordRequest(shardURL)
+
+        proxyReq, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, "Failed to create request", http.StatusInternalServerError)
+                return
+        }</span>
+        <span class="cov8" title="1">proxyReq.Header = r.Header
+
+        client := &amp;http.Client{}
+        resp, err := client.Do(proxyReq)
+        if err != nil </span><span class="cov8" title="1">{
+                http.Error(w, err.Error(), http.StatusBadGateway)
+                return
+        }</span>
+        <span class="cov8" title="1">defer resp.Body.Close()
+
+        for k, v := range resp.Header </span><span class="cov8" title="1">{
+                w.Header()[k] = v
+        }</span>
+
+        <span class="cov8" title="1">ph.metricsRecorder.RecordResponse(shardURL, resp.StatusCode)
+
+        w.WriteHeader(resp.StatusCode)
+        io.Copy(w, resp.Body)</span>
+}
+
+// NewProxyHandler cria um novo handler de proxy
+func NewProxyHandler(router interfaces.ShardRouter, metricsRecorder interfaces.MetricsRecorder) *ProxyHandler <span class="cov8" title="1">{
+        return &amp;ProxyHandler{
+                router:          router,
+                metricsRecorder: metricsRecorder,
+        }
+}</span>
+
+// HealthCheckHandler implementa o health check
+func HealthCheckHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        w.WriteHeader(http.StatusOK)
+}</span>
+
+// SetupRouter configura e inicializa o roteador de shards
+func (ps *ProxyServer) SetupRouter() error <span class="cov0" title="0">{
+        err := setup.InitWithRouter(ps.router)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// Start inicia o servidor HTTP
+func (ps *ProxyServer) Start() error <span class="cov0" title="0">{
+        // Setup do roteador
+        err := ps.SetupRouter()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Prometheus
+        <span class="cov0" title="0">reg := prometheus.NewRegistry()
+
+        // Type assertion para acessar os counters do Prometheus
+        prometheusRecorder := ps.metricsRecorder.(*PrometheusMetricsRecorder)
+
+        reg.MustRegister(
+                collectors.NewGoCollector(),
+                collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+                &amp;prometheusRecorder.requestsCounter,
+                &amp;prometheusRecorder.responseCounter,
+        )
+
+        // Setup dos handlers
+        proxyHandler := NewProxyHandler(ps.router, ps.metricsRecorder)
+
+        mux := http.NewServeMux()
+        mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+        mux.HandleFunc("/healthz", HealthCheckHandler)
+        mux.Handle("/", proxyHandler)
+
+        log.Printf("HTTP Proxy running on port %s", ps.port)
+        return http.ListenAndServe(":"+ps.port, mux)</span>
+}
+
+func main() <span class="cov0" title="0">{
+        port := os.Getenv("ROUTER_PORT")
+        if port == "" </span><span class="cov0" title="0">{
+                port = "8080"
+        }</span>
+
+        <span class="cov0" title="0">server := NewProxyServer(port)
+        log.Fatal(server.Start())</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package hashring
+
+import (
+        "app/pkg/interfaces"
+        "crypto/sha512"
+        "encoding/binary"
+        "sort"
+        "strconv"
+        "strings"
+)
+
+type Node struct {
+        ID   string
+        Hash uint64
+}
+
+// ConsistentHashRing representa o hash ring que contém vários nós.
+// Implementa a interface interfaces.HashRing
+type ConsistentHashRing struct {
+        Nodes       []Node
+        NumReplicas int
+}
+
+// Garantir que ConsistentHashRing implementa a interface HashRing
+var _ interfaces.HashRing = (*ConsistentHashRing)(nil)
+
+// NewConsistentHashRing cria um novo anel de hash ring.
+func NewConsistentHashRing(numReplicas int) interfaces.HashRing <span class="cov8" title="1">{
+        return &amp;ConsistentHashRing{
+                Nodes:       []Node{},
+                NumReplicas: numReplicas,
+        }
+}</span>
+
+// AddNode adiciona um nó ao hash ring com múltiplas réplicas virtuais
+func (ring *ConsistentHashRing) AddNode(nodeID string) <span class="cov8" title="1">{
+        for i := 0; i &lt; ring.NumReplicas; i++ </span><span class="cov8" title="1">{
+                replicaID := nodeID + strconv.Itoa(i)
+                hash := hashKey(replicaID)
+                ring.Nodes = append(ring.Nodes, Node{ID: nodeID, Hash: hash})
+        }</span>
+        <span class="cov8" title="1">sort.Slice(ring.Nodes, func(i, j int) bool </span><span class="cov8" title="1">{
+                return ring.Nodes[i].Hash &lt; ring.Nodes[j].Hash
+        }</span>)
+}
+
+// hashKey calcula o hash do tenant e a converte para uint64.
+func hashKey(s string) uint64 <span class="cov8" title="1">{
+        s = strings.ToLower(s)
+        hash := sha512.New()
+        hash.Write([]byte(s))
+        hashBytes := hash.Sum(nil)
+        return binary.BigEndian.Uint64(hashBytes[:8])
+}</span>
+
+// GetNode retorna o node onde o Tenant deverá estar alocado
+func (ring *ConsistentHashRing) GetNode(key string) string <span class="cov8" title="1">{
+        if len(ring.Nodes) == 0 </span><span class="cov8" title="1">{
+                return ""
+        }</span>
+
+        <span class="cov8" title="1">hash := hashKey(key)
+        idx := sort.Search(len(ring.Nodes), func(i int) bool </span><span class="cov8" title="1">{
+                return ring.Nodes[i].Hash &gt;= hash
+        }</span>)
+
+        // Se o índice estiver fora dos limites, retorna ao primeiro nó
+        <span class="cov8" title="1">if idx == len(ring.Nodes) </span><span class="cov8" title="1">{
+                idx = 0
+        }</span>
+
+        <span class="cov8" title="1">return ring.Nodes[idx].ID</span>
+}
+
+// Exemplos do artigo: https://fidelissauro.dev/sharding/
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package setup
+
+import (
+        "app/pkg/interfaces"
+        "app/pkg/sharding"
+        "fmt"
+        "os"
+        "regexp"
+        "strconv"
+        "sync"
+)
+
+// ConfigManagerImpl implementa a interface ConfigManager
+type ConfigManagerImpl struct {
+        shards      []interfaces.Shard
+        shardingKey string
+        once        sync.Once
+}
+
+// Garantir que ConfigManagerImpl implementa a interface ConfigManager
+var _ interfaces.ConfigManager = (*ConfigManagerImpl)(nil)
+
+// NewConfigManager cria uma nova instância de ConfigManager
+func NewConfigManager() interfaces.ConfigManager <span class="cov8" title="1">{
+        return &amp;ConfigManagerImpl{}
+}</span>
+
+func (cm *ConfigManagerImpl) LoadShards() ([]interfaces.Shard, error) <span class="cov8" title="1">{
+        var err error
+        cm.once.Do(func() </span><span class="cov8" title="1">{
+                cm.shards, err = cm.discoverShards()
+        }</span>)
+        <span class="cov8" title="1">return cm.shards, err</span>
+}
+
+func (cm *ConfigManagerImpl) GetShardingKey() string <span class="cov8" title="1">{
+        if cm.shardingKey == "" </span><span class="cov8" title="1">{
+                cm.shardingKey = os.Getenv("SHARDING_KEY")
+        }</span>
+        <span class="cov8" title="1">return cm.shardingKey</span>
+}
+
+func (cm *ConfigManagerImpl) discoverShards() ([]interfaces.Shard, error) <span class="cov8" title="1">{
+        var shards []interfaces.Shard
+
+        // Verifica se existem variáveis com o padrão SHARD_*_URL
+        pattern := regexp.MustCompile(`^SHARD_(\d+)_URL$`)
+
+        for _, env := range os.Environ() </span><span class="cov8" title="1">{
+                // Split the environment variable into key and value
+                pair := splitEnv(env)
+                key := pair[0]
+
+                // Check if the key matches the pattern
+                if matches := pattern.FindStringSubmatch(key); matches != nil </span><span class="cov8" title="1">{
+                        shardID, err := strconv.Atoi(matches[1])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("invalid shard ID %s: %v", matches[1], err)
+                        }</span>
+
+                        <span class="cov8" title="1">shard := interfaces.Shard{
+                                ID:   shardID,
+                                Name: "SHARD_" + matches[1],
+                                URL:  pair[1],
+                        }
+                        shards = append(shards, shard)
+                        fmt.Printf("Mapping shard %v on host: %s\n", shard.ID, shard.URL)</span>
+                }
+        }
+
+        <span class="cov8" title="1">if len(shards) == 0 </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("no shards found. Please set SHARD_*_URL environment variables")
+        }</span>
+
+        <span class="cov8" title="1">return shards, nil</span>
+}
+
+func splitEnv(env string) []string <span class="cov8" title="1">{
+        for i := 0; i &lt; len(env); i++ </span><span class="cov8" title="1">{
+                if env[i] == '=' </span><span class="cov8" title="1">{
+                        return []string{env[:i], env[i+1:]}
+                }</span>
+        }
+        <span class="cov8" title="1">return []string{env, ""}</span>
+}
+
+// Init inicializa o sistema com as configurações descobertas
+// Esta função mantém compatibilidade com o código existente
+func Init() error <span class="cov8" title="1">{
+        return InitWithRouter(nil)
+}</span>
+
+// InitWithRouter permite injeção de dependência do ShardRouter
+func InitWithRouter(router interfaces.ShardRouter) error <span class="cov8" title="1">{
+        configManager := NewConfigManager()
+
+        shardingKey := configManager.GetShardingKey()
+        if shardingKey == "" </span><span class="cov8" title="1">{
+                return fmt.Errorf("SHARDING_KEY not set")
+        }</span>
+
+        <span class="cov8" title="1">shards, err := configManager.LoadShards()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Se não foi fornecido um router, criar um novo
+        <span class="cov8" title="1">if router == nil </span><span class="cov8" title="1">{
+                router = sharding.NewShardRouter(shardingKey)
+        }</span>
+
+        // Setup Hash Ring
+        <span class="cov8" title="1">fmt.Printf("Setting up Hash Ring with %v nodes\n", len(shards))
+        router.InitHashRing(len(shards))
+
+        for _, shard := range shards </span><span class="cov8" title="1">{
+                router.AddShard(shard.URL)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package sharding
+
+import (
+        "app/pkg/hashring"
+        "app/pkg/interfaces"
+        "fmt"
+        "net/http"
+        "os"
+)
+
+// ShardRouterImpl implementa a interface ShardRouter
+type ShardRouterImpl struct {
+        hashRing    interfaces.HashRing
+        shardingKey string
+}
+
+// Garantir que ShardRouterImpl implementa a interface ShardRouter
+var _ interfaces.ShardRouter = (*ShardRouterImpl)(nil)
+
+// NewShardRouter cria uma nova instância de ShardRouter
+func NewShardRouter(shardingKey string) interfaces.ShardRouter <span class="cov8" title="1">{
+        return &amp;ShardRouterImpl{
+                shardingKey: shardingKey,
+        }
+}</span>
+
+func (sr *ShardRouterImpl) InitHashRing(size int) <span class="cov8" title="1">{
+        if sr.hashRing == nil </span><span class="cov8" title="1">{
+                // Importar a função de criação do hashring
+                sr.hashRing = createHashRing(size)
+        }</span>
+}
+
+func (sr *ShardRouterImpl) AddShard(shardHost string) <span class="cov8" title="1">{
+        if sr.hashRing == nil </span><span class="cov8" title="1">{
+                panic("Hash ring not initialized. Call InitHashRing first.")</span>
+        }
+        <span class="cov8" title="1">fmt.Println("Adding shard to hash ring: ", shardHost)
+        sr.hashRing.AddNode(shardHost)</span>
+}
+
+func (sr *ShardRouterImpl) GetShardingKey(r *http.Request) string <span class="cov8" title="1">{
+        if sr.shardingKey == "" </span><span class="cov0" title="0">{
+                // Fallback para variável de ambiente se não foi configurado
+                sr.shardingKey = os.Getenv("SHARDING_KEY")
+        }</span>
+        <span class="cov8" title="1">return r.Header.Get(sr.shardingKey)</span>
+}
+
+func (sr *ShardRouterImpl) GetShardHost(key string) string <span class="cov8" title="1">{
+        if sr.hashRing == nil </span><span class="cov8" title="1">{
+                panic("Hash ring not initialized. Call InitHashRing first.")</span>
+        }
+        <span class="cov8" title="1">node := sr.hashRing.GetNode(key)
+        fmt.Printf("Mapping sharding key %s to host: %s\n", key, node)
+        return node</span>
+}
+
+// createHashRing é uma função auxiliar para criar o hash ring
+// Isso permite injeção de dependência em testes
+func createHashRing(size int) interfaces.HashRing <span class="cov8" title="1">{
+        return hashring.NewConsistentHashRing(size)
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

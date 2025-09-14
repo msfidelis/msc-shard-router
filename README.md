@@ -292,12 +292,56 @@ curl -H "id_client: user123" http://localhost:9090/
 - **Docker**: Containerização
 - **Air**: Hot reload para desenvolvimento
 
+## 🏗️ Arquitetura Testável
+
+O projeto foi refatorado seguindo princípios de **Clean Architecture** e **Dependency Injection** para maximizar a testabilidade:
+
+### Interfaces e Abstrações
+
+```go
+// Principais interfaces para testabilidade
+type HashRing interface {
+    AddNode(nodeID string)
+    GetNode(key string) string
+}
+
+type ShardRouter interface {
+    GetShardingKey(r *http.Request) string
+    GetShardHost(key string) string
+    InitHashRing(size int)
+    AddShard(shardHost string)
+}
+
+type ConfigManager interface {
+    LoadShards() ([]Shard, error)
+    GetShardingKey() string
+}
+```
+
+### Benefícios da Arquitetura
+
+- **Testabilidade**: Mocking fácil de dependências através de interfaces
+- **Injeção de Dependência**: Componentes desacoplados e testáveis isoladamente
+- **Separation of Concerns**: Cada package tem responsabilidade única
+- **Facilidade de Manutenção**: Código modular e bem estruturado
+
+### Padrões Implementados
+
+- **Repository Pattern**: Para configuração de shards
+- **Strategy Pattern**: Para algoritmos de hash
+- **Dependency Injection**: Para testabilidade
+- **Interface Segregation**: Interfaces pequenas e focadas
+
 
 ## 🚀 Execução Local
 
 ### Docker Compose (Recomendado)
 
 ```bash
+# Subir todos os serviços
+make docker-compose-up
+
+# Ou manualmente:
 docker-compose up -d
 ```
 
@@ -305,8 +349,11 @@ docker-compose up -d
 
 ```bash
 # Build da aplicação
+make build
+
+# Ou manualmente:
 go mod tidy
-go build -o main .
+go build -o shard-router .
 
 # Configuração das variáveis
 export ROUTER_PORT=8080
@@ -316,7 +363,42 @@ export SHARD_02_URL=http://localhost:8082
 export SHARD_03_URL=http://localhost:8083
 
 # Execução
-./main
+make run
+```
+
+## Testes
+
+O projeto possui uma suite completa de testes unitários com alta cobertura:
+
+### Executar Testes
+
+```bash
+# Todos os testes
+make test
+
+# Testes com coverage
+make test-coverage
+
+# Testes verbosos
+make test-verbose
+
+# Benchmarks
+make benchmark
+```
+
+### Estrutura de Testes
+
+- **`pkg/hashring/main_test.go`**: Testes do algoritmo de hash consistente
+- **`pkg/sharding/main_test.go`**: Testes do roteamento de shards
+- **`pkg/setup/main_test.go`**: Testes da configuração e descoberta de shards
+- **`main_test.go`**: Testes dos handlers HTTP e integração
+
+
+### Testes de Integração
+
+```bash
+# Testa o sistema completo com Docker Compose
+make test-integration
 ```
 
 ## Referências Acadêmicas

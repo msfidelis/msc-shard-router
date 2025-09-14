@@ -1,6 +1,7 @@
 package hashring
 
 import (
+	"app/pkg/interfaces"
 	"crypto/sha512"
 	"encoding/binary"
 	"sort"
@@ -13,21 +14,25 @@ type Node struct {
 	Hash uint64
 }
 
-// Representa o hash ring que contém vários nós.
+// ConsistentHashRing representa o hash ring que contém vários nós.
+// Implementa a interface interfaces.HashRing
 type ConsistentHashRing struct {
 	Nodes       []Node
 	NumReplicas int
 }
 
-// Cria um novo anel de hash ring.
-func NewConsistentHashRing(numReplicas int) *ConsistentHashRing {
+// Garantir que ConsistentHashRing implementa a interface HashRing
+var _ interfaces.HashRing = (*ConsistentHashRing)(nil)
+
+// NewConsistentHashRing cria um novo anel de hash ring.
+func NewConsistentHashRing(numReplicas int) interfaces.HashRing {
 	return &ConsistentHashRing{
 		Nodes:       []Node{},
 		NumReplicas: numReplicas,
 	}
 }
 
-// Retorna o nó que contém o hash mais próximo do hash fornecido.
+// AddNode adiciona um nó ao hash ring com múltiplas réplicas virtuais
 func (ring *ConsistentHashRing) AddNode(nodeID string) {
 	for i := 0; i < ring.NumReplicas; i++ {
 		replicaID := nodeID + strconv.Itoa(i)
@@ -39,7 +44,7 @@ func (ring *ConsistentHashRing) AddNode(nodeID string) {
 	})
 }
 
-// Calcula o hash do tenant e a converte para uint64.
+// hashKey calcula o hash do tenant e a converte para uint64.
 func hashKey(s string) uint64 {
 	s = strings.ToLower(s)
 	hash := sha512.New()
@@ -48,8 +53,12 @@ func hashKey(s string) uint64 {
 	return binary.BigEndian.Uint64(hashBytes[:8])
 }
 
-// Retorna o node onde o Tenant deverá estar alocado
+// GetNode retorna o node onde o Tenant deverá estar alocado
 func (ring *ConsistentHashRing) GetNode(key string) string {
+	if len(ring.Nodes) == 0 {
+		return ""
+	}
+
 	hash := hashKey(key)
 	idx := sort.Search(len(ring.Nodes), func(i int) bool {
 		return ring.Nodes[i].Hash >= hash

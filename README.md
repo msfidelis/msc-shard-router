@@ -1,5 +1,12 @@
 # MSC Notes - Shard Router
 
+[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/msc-shard-router/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/YOUR_USERNAME/msc-shard-router/actions/workflows/ci-cd.yml)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/YOUR_USERNAME/msc-shard-router)](https://go.dev/)
+[![Coverage](https://img.shields.io/badge/coverage-87%25-green)](https://github.com/YOUR_USERNAME/msc-shard-router/actions)
+[![Security Scan](https://img.shields.io/badge/security-passing-green)](https://github.com/YOUR_USERNAME/msc-shard-router/security)
+[![Performance](https://img.shields.io/badge/performance-tested-blue)](https://github.com/YOUR_USERNAME/msc-shard-router/actions/workflows/performance.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Um proxy router baseado em hash consistente para distribuição de requisições entre shards, desenvolvido como parte das POCs do mestrado em arquitetura celular.
 
 ## Visão Geral

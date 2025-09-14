@@ -1,0 +1,141 @@
+# Configuração do golangci-lint para o MSC Shard Router
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  skip-dirs:
+    - vendor
+    - tmp
+  skip-files:
+    - ".*_test.go"
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  # Configurações específicas dos linters
+  gofmt:
+    simplify: true
+  
+  goimports:
+    local-prefixes: app
+  
+  golint:
+    min-confidence: 0.8
+  
+  govet:
+    check-shadowing: true
+    enable-all: true
+  
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  
+  gocyclo:
+    min-complexity: 15
+  
+  maligned:
+    suggest-new: true
+  
+  dupl:
+    threshold: 100
+  
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+    disabled-checks:
+      - commentedOutCode
+      - whyNoLint
+  
+  funlen:
+    lines: 100
+    statements: 50
+  
+  gocognit:
+    min-complexity: 20
+  
+  nestif:
+    min-complexity: 5
+
+linters:
+  enable:
+    - bodyclose      # Verifica se response body é fechado
+    - deadcode       # Encontra código não utilizado
+    - depguard       # Verifica dependências permitidas
+    - dogsled        # Verifica assignments com muitos blank identifiers
+    - dupl           # Encontra código duplicado
+    - errcheck       # Verifica erros não tratados
+    - exportloopref  # Verifica loop variable export
+    - funlen         # Verifica funções muito longas
+    - gochecknoinits # Verifica se não há funções init
+    - goconst        # Encontra strings repetidas que poderiam ser constantes
+    - gocritic       # Linter com muitas verificações
+    - gocyclo        # Verifica complexidade ciclomática
+    - gofmt          # Verifica se código está formatado
+    - goimports      # Verifica se imports estão formatados
+    - golint         # Linter oficial do Go
+    - gomnd          # Verifica números mágicos
+    - goprintffuncname # Verifica nomes de funções printf
+    - gosec          # Verifica problemas de segurança
+    - gosimple       # Simplifica código
+    - govet          # Examina código Go e reporta constructs suspeitos
+    - ineffassign    # Detecta assignments ineficazes
+    - interfacer     # Sugere interfaces mais estreitas
+    - lll            # Verifica linhas muito longas
+    - misspell       # Encontra palavras mal escritas
+    - nakedret       # Encontra naked returns em funções longas
+    - noctx          # Encontra envio de http requests sem context
+    - nolintlint     # Reporta uso mal formatado de nolint
+    - rowserrcheck   # Verifica se sql rows err é verificado
+    - staticcheck    # Análise estática
+    - structcheck    # Encontra structs fields não utilizados
+    - stylecheck     # Replacement para golint
+    - typecheck      # Type-checks do Go
+    - unconvert      # Remove conversões de tipo desnecessárias
+    - unparam        # Reporta parâmetros de função não utilizados
+    - unused         # Verifica código não utilizado
+    - varcheck       # Encontra variáveis globais e constantes não utilizadas
+    - whitespace     # Verifica espaços em branco desnecessários
+
+  disable:
+    - maligned       # Pode ser muito restritivo
+    - prealloc       # Pode ser muito restritivo para casos acadêmicos
+
+issues:
+  exclude-rules:
+    # Excluir algumas verificações para arquivos de teste
+    - path: _test\.go
+      linters:
+        - gomnd
+        - funlen
+        - gocyclo
+        - dupl
+    
+    # Excluir verificações específicas para main.go
+    - path: main\.go
+      linters:
+        - gochecknoinits
+    
+    # Excluir verificações de função main
+    - text: "function `main` is too long"
+      linters:
+        - funlen
+
+  # Número máximo de issues
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  
+  # Mostrar apenas novos issues se possível
+  new: false
+
+severity:
+  default-severity: error

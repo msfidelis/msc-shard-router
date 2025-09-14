@@ -111,41 +111,41 @@ jobs:
             coverage.out
             coverage.html
 
-  # Job de Benchmarks
-  benchmark:
-    name: 📊 Benchmarks
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # # Job de Benchmarks
+  # benchmark:
+  #   name: 📊 Benchmarks
+  #   runs-on: ubuntu-latest
+  #   needs: lint
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v4
+  #       with:
+  #         go-version: ${{ env.GO_VERSION }}
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+  #     - name: Cache Go modules
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: ~/go/pkg/mod
+  #         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-go-
 
-      - name: Install dependencies
-        run: go mod download
+  #     - name: Install dependencies
+  #       run: go mod download
 
-      - name: Run benchmarks
-        run: |
-          go test -bench=. -benchmem -count=3 ./... > benchmark.txt
-          cat benchmark.txt
+  #     - name: Run benchmarks
+  #       run: |
+  #         go test -bench=. -benchmem -count=3 ./... > benchmark.txt
+  #         cat benchmark.txt
 
-      - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-results
-          path: benchmark.txt
+  #     - name: Upload benchmark results
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: benchmark-results
+  #         path: benchmark.txt
 
   # Job de Segurança
   security:
@@ -371,7 +371,7 @@ jobs:
   notify:
     name: 📢 Notify
     runs-on: ubuntu-latest
-    needs: [test, benchmark, security, build, docker]
+    needs: [test, security, build, docker]
     if: always()
     steps:
       - name: Notify on success

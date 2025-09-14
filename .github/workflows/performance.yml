@@ -65,7 +65,7 @@ jobs:
           echo "✅ Performance within acceptable limits"
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: benchmark-results-${{ github.sha }}
           path: benchmark-results.txt
@@ -183,7 +183,7 @@ jobs:
           fi
 
       - name: Upload load test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: load-test-results-${{ github.sha }}
           path: |
@@ -227,7 +227,7 @@ jobs:
           cat performance-report.md
 
       - name: Upload performance report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-report-${{ github.sha }}
           path: performance-report.md

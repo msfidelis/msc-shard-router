@@ -293,7 +293,7 @@ curl -H "id_client: user123" http://localhost:9090/
 
 ## Stack Utilizada
 
-- **Go 1.23**: Runtime e linguagem
+- **Go 1.25**: Runtime e linguagem
 - **Gorilla Mux**: Roteamento HTTP
 - **Prometheus**: Métricas e observabilidade
 - **Docker**: Containerização

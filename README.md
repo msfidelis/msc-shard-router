@@ -20,6 +20,61 @@ O projeto implementa um padrão de proxy reverso que utiliza hash consistente pa
 Cliente → Shard Router → [Hash Consistente] → Shard N
 ```
 
+### Arquitetura Detalhada
+
+```mermaid
+graph TB
+    subgraph "Cliente"
+        C1[Aplicação Cliente]
+        C2[Header: id_client]
+    end
+    
+    subgraph "Shard Router"
+        SR1[HTTP Server :8080]
+        SR2[Extrator de Header]
+        SR3[Hash Ring Engine]
+        SR4[Proxy Reverso]
+        SR5[Métricas Prometheus]
+        
+        SR1 --> SR2
+        SR2 --> SR3
+        SR3 --> SR4
+        SR4 --> SR5
+    end
+    
+    subgraph "Shards Backend"
+        S1[Shard 01<br/>:8081]
+        S2[Shard 02<br/>:8082]
+        S3[Shard 03<br/>:8083]
+        SN[Shard N<br/>:808N]
+    end
+    
+    subgraph "Observabilidade"
+        M1[/metrics endpoint]
+        M2[/healthz endpoint]
+        M3[Logs estruturados]
+    end
+    
+    C1 --> SR1
+    C2 --> SR2
+    
+    SR4 --> S1
+    SR4 --> S2
+    SR4 --> S3
+    SR4 --> SN
+    
+    SR5 --> M1
+    SR1 --> M2
+    SR1 --> M3
+    
+    style SR3 fill:#e1f5fe
+    style C2 fill:#fff3e0
+    style S1 fill:#f3e5f5
+    style S2 fill:#f3e5f5
+    style S3 fill:#f3e5f5
+    style SN fill:#f3e5f5
+```
+
 ## 🔧 Configuração
 
 ### Variáveis de Ambiente
@@ -79,6 +134,85 @@ O sistema utiliza **SHA-512** para geração de hashes, convertidos para `uint64
 2. **Hashing**: Cálculo SHA-512 do valor + conversão para uint64
 3. **Lookup**: Busca binária no anel ordenado pelo hash
 4. **Roteamento**: Proxy da requisição para o shard selecionado
+
+### Diagrama do Hash Consistente
+
+```mermaid
+graph TD
+    A[Requisição HTTP] --> B{Header SHARDING_KEY existe?}
+    B -->|Não| C[Erro: Header obrigatório]
+    B -->|Sim| D[Extrair valor do header]
+    
+    D --> E[Hash SHA-512 do valor]
+    E --> F[Converter para uint64]
+    F --> G[Busca binária no anel hash]
+    
+    G --> H{Posição encontrada?}
+    H -->|Não encontrada| I[Retorna primeiro nó do anel]
+    H -->|Encontrada| J[Retorna nó na posição]
+    
+    I --> K[Proxy para shard selecionado]
+    J --> K
+    
+    K --> L[Registrar métricas]
+    L --> M[Retornar resposta]
+
+    subgraph "Estrutura do Hash Ring"
+        N[Shard A] --> N1[Replica A-0: hash_A0]
+        N --> N2[Replica A-1: hash_A1]
+        N --> N3[Replica A-2: hash_A2]
+        
+        O[Shard B] --> O1[Replica B-0: hash_B0]
+        O --> O2[Replica B-1: hash_B1]
+        O --> O3[Replica B-2: hash_B2]
+        
+        P[Shard C] --> P1[Replica C-0: hash_C0]
+        P --> P2[Replica C-1: hash_C1]
+        P --> P3[Replica C-2: hash_C2]
+    end
+
+    subgraph "Anel Hash Ordenado"
+        Q[hash_A0] --> R[hash_B1]
+        R --> S[hash_C0]
+        S --> T[hash_A1]
+        T --> U[hash_B2]
+        U --> V[hash_C1]
+        V --> W[hash_A2]
+        W --> X[hash_B0]
+        X --> Y[hash_C2]
+        Y --> Q
+    end
+```
+
+### Algoritmo de Distribuição
+
+O hash consistente implementado segue os seguintes princípios:
+
+1. **Múltiplas Réplicas Virtuais**: Cada shard físico é representado por múltiplas posições no anel hash
+2. **Distribuição Uniforme**: As réplicas virtuais minimizam hotspots e garantem distribuição equilibrada
+3. **Estabilidade**: Adição/remoção de shards afeta apenas os nós adjacentes no anel
+4. **Eficiência**: Busca binária O(log n) para localização do shard de destino
+
+```mermaid
+flowchart LR
+    subgraph "Processo de Inicialização"
+        A1[Descobrir Shards via ENV] --> A2[Criar Hash Ring]
+        A2 --> A3[Para cada Shard]
+        A3 --> A4[Gerar N réplicas virtuais]
+        A4 --> A5[Calcular hash SHA-512]
+        A5 --> A6[Adicionar ao anel ordenado]
+        A6 --> A3
+    end
+    
+    subgraph "Processo de Roteamento"
+        B1[Request com header] --> B2[Extrair chave de sharding]
+        B2 --> B3[Hash SHA-512 da chave]
+        B3 --> B4[Busca binária no anel]
+        B4 --> B5[Encontrar próximo nó >= hash]
+        B5 --> B6[Retornar shard físico]
+        B6 --> B7[Proxy da requisição]
+    end
+```
 
 ## Endpoints
 

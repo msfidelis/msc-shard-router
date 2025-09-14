@@ -179,11 +179,9 @@ jobs:
     needs: [test, security]
     strategy:
       matrix:
-        goos: [linux, windows, darwin]
+        goos: [linux, darwin]
         goarch: [amd64, arm64]
-        exclude:
-          - goos: windows
-            goarch: arm64
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

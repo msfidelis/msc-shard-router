@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    image: cosmtrek/air:v1.61.7
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "9090:8080"
+    command: ["air"]
+    environment:
+      - ROUTER_PORT=8080
+      - SHARDING_KEY=id_client
+      - SHARD_01_URL=http://shard01:80
+      - SHARD_02_URL=http://shard02:80
+      - SHARD_03_URL=http://shard03:80
+
+  shard01:
+    image: nginx:alpine
+    ports:
+      - "8081:80"
+
+  shard02:
+    image: nginx:alpine
+    ports:
+      - "8082:80"
+
+  shard03:
+    image: nginx:alpine
+    ports:
+      - "8083:80"

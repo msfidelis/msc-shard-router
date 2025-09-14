@@ -1,6 +1,6 @@
 module app
 
-go 1.25.4
+go 1.25
 
 require github.com/prometheus/client_golang v1.21.0
 

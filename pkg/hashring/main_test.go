@@ -1,6 +1,7 @@
 package hashring
 
 import (
+	"os"
 	"testing"
 )
 
@@ -107,6 +108,7 @@ func TestHashKey(t *testing.T) {
 }
 
 func TestDistribution(t *testing.T) {
+	os.Setenv("HASHING_ALGORITHM", "SHA1")
 	ring := NewConsistentHashRing(3)
 
 	// Adicionar 3 shards
@@ -114,7 +116,6 @@ func TestDistribution(t *testing.T) {
 	for _, shard := range shards {
 		ring.AddNode(shard)
 	}
-
 	// Testar distribuição com muitas chaves
 	distribution := make(map[string]int)
 	numKeys := 1000

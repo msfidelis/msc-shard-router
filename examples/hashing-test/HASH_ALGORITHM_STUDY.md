@@ -1,206 +1,131 @@
-# Estudo Comparativo de Algoritmos de Hashing para Shard Router
+# Estudo Comparativo de Algoritmos de Hashing
 
-## Introdução
+## Resumo Executivo
 
-Este documento apresenta um estudo comparativo de algoritmos de hashing para distribuição de chaves em um sistema de sharding consistente. O objetivo é determinar qual algoritmo oferece a melhor combinação de **distribuição uniforme** e **performance** para o MSC Shard Router.
+Este estudo compara diferentes algoritmos de hashing para distribuição de chaves entre shards,
+avaliando a uniformidade da distribuição e performance dos algoritmos.
 
-## Metodologia
+## Resultados Comparativos
 
-### Configuração do Teste
-- **Chaves de teste**: 1000 UUIDs v4 aleatórios
-- **Número de shards**: 3 (shard01, shard02, shard03)
-- **Réplicas virtuais**: 10 por shard
-- **Distribuição ideal**: ~333.33 UUIDs por shard (33.33% cada)
-- **Plataforma**: Apple M4, macOS, Go 1.23
+| Algoritmo | Desvio Padrão | Variância | Melhor Shard (%) | Pior Shard (%) | Diferença |
+|-----------|---------------|-----------|------------------|----------------|----------|
+| SHA512 | 28.31 | 801.67 | 30.5% | 37.2% | 6.7% |
+| SHA256 | 64.60 | 4173.67 | 26.3% | 41.9% | 15.6% |
+| SHA1 | 11.03 | 121.67 | 32.0% | 34.7% | 2.7% |
+| MD5 | 42.05 | 1768.33 | 28.2% | 38.5% | 10.3% |
+| FNV64 | 395.12 | 156116.33 | 2.4% | 89.1% | 86.7% |
+| SimpleHash | 471.40 | 222222.33 | 0.0% | 100.0% | 100.0% |
 
-### Critérios de Avaliação
-- **EXCELENTE**: Desvio médio ≤ 10%
-- **BOA**: Desvio médio ≤ 15% 
-- **REGULAR**: Desvio médio ≤ 25%
-- **RUIM**: Desvio médio > 25%
+### SHA512
 
-### Algoritmos Testados
-1. **SHA-512** (algoritmo atual do sistema)
-2. **SHA-256** (padrão da indústria)
-3. **MD5** (algoritmo legado)
-4. **FNV-1a** (algoritmo não-criptográfico)
+**Distribuição por Shard:**
 
-## Resultados dos Testes
+| Shard | Quantidade | Percentual |
+|-------|------------|------------|
+| shard-01 | 323 | 32.3% |
+| shard-02 | 305 | 30.5% |
+| shard-03 | 372 | 37.2% |
 
-### Distribuição de UUIDs
+**Estatísticas:**
+- Total de chaves: 1000
+- Esperado por shard: 333
+- Desvio padrão: 28.31
+- Variância: 801.67
 
-| Algoritmo | Shard01 | Shard02 | Shard03 | Desvio Médio | Qualidade |
-|-----------|---------|---------|---------|--------------|-----------|
-| **SHA-512** | 359 (35.9%) | 265 (26.5%) | 376 (37.6%) | 45.6 UUIDs (13.7%) | ✅ **BOA** |
-| **SHA-256** | 286 (28.6%) | 445 (44.5%) | 269 (26.9%) | 74.4 UUIDs (22.3%) | ⚠️ **REGULAR** |
-| **MD5** | 305 (30.5%) | 429 (42.9%) | 266 (26.6%) | 63.8 UUIDs (19.1%) | ⚠️ **REGULAR** |
-| **FNV-1a** | 910 (91.0%) | 32 (3.2%) | 58 (5.8%) | 384.4 UUIDs (115.3%) | ❌ **RUIM** |
+### SHA256
 
-### Performance Benchmark
+**Distribuição por Shard:**
 
-| Algoritmo | ns/operação | Alocações/op | Bytes/op | Velocidade Relativa |
-|-----------|-------------|--------------|----------|-------------------|
-| **FNV-1a** | 16.03 | 0 | 0 | 🚀 **6.7x mais rápido** |
-| **SHA-256** | 46.67 | 1 | 32 | 🏃 **2.3x mais rápido** |
-| **MD5** | 90.19 | 1 | 16 | ⚡ **1.2x mais rápido** |
-| **SHA-512** | 107.3 | 1 | 64 | 📊 **Baseline** |
+| Shard | Quantidade | Percentual |
+|-------|------------|------------|
+| shard-01 | 419 | 41.9% |
+| shard-02 | 263 | 26.3% |
+| shard-03 | 318 | 31.8% |
 
-## Análise Detalhada
+**Estatísticas:**
+- Total de chaves: 1000
+- Esperado por shard: 333
+- Desvio padrão: 64.60
+- Variância: 4173.67
 
-### 🏆 SHA-512 (Atual)
-**Distribuição**: ✅ BOA (13.7% desvio)
-**Performance**: 107.3 ns/op
+### SHA1
 
-**Pontos Positivos:**
-- Melhor distribuição entre todos os algoritmos testados
-- Máxima segurança criptográfica
-- Resistente a ataques de colisão
-- Consistência comprovada em produção
+**Distribuição por Shard:**
 
-**Pontos de Atenção:**
-- Maior custo computacional
-- Maior uso de memória (64 bytes/op)
+| Shard | Quantidade | Percentual |
+|-------|------------|------------|
+| shard-01 | 347 | 34.7% |
+| shard-02 | 320 | 32.0% |
+| shard-03 | 333 | 33.3% |
 
-### 🥈 SHA-256
-**Distribuição**: ⚠️ REGULAR (22.3% desvio)
-**Performance**: 46.67 ns/op (2.3x mais rápido)
+**Estatísticas:**
+- Total de chaves: 1000
+- Esperado por shard: 333
+- Desvio padrão: 11.03
+- Variância: 121.67
 
-**Pontos Positivos:**
-- Boa performance (2.3x mais rápido que SHA-512)
-- Segurança criptográfica adequada
-- Padrão da indústria
-- Menor uso de memória que SHA-512
+### MD5
 
-**Pontos de Atenção:**
-- Distribuição menos uniforme que SHA-512
-- Concentração de chaves no shard02 (44.5%)
+**Distribuição por Shard:**
 
-### 🥉 MD5
-**Distribuição**: ⚠️ REGULAR (19.1% desvio)
-**Performance**: 90.19 ns/op (1.2x mais rápido)
+| Shard | Quantidade | Percentual |
+|-------|------------|------------|
+| shard-03 | 385 | 38.5% |
+| shard-01 | 333 | 33.3% |
+| shard-02 | 282 | 28.2% |
 
-**Pontos Positivos:**
-- Performance razoável
-- Menor uso de memória (16 bytes/op)
-- Distribuição melhor que SHA-256
+**Estatísticas:**
+- Total de chaves: 1000
+- Esperado por shard: 333
+- Desvio padrão: 42.05
+- Variância: 1768.33
 
-**Pontos de Atenção:**
-- Vulnerabilidades de segurança conhecidas
-- Não recomendado para novos sistemas
-- Concentração de chaves no shard02 (42.9%)
+### FNV64
 
-### ❌ FNV-1a
-**Distribuição**: ❌ RUIM (115.3% desvio)
-**Performance**: 16.03 ns/op (6.7x mais rápido)
+**Distribuição por Shard:**
 
-**Pontos Positivos:**
-- Máxima performance (6.7x mais rápido)
-- Zero alocações de memória
-- Ideal para cases não-criptográficos
+| Shard | Quantidade | Percentual |
+|-------|------------|------------|
+| shard-01 | 24 | 2.4% |
+| shard-02 | 891 | 89.1% |
+| shard-03 | 85 | 8.5% |
 
-**Pontos Críticos:**
-- Distribuição completamente desigual
-- 91% das chaves concentradas em um único shard
-- Inviável para uso em produção com consistent hashing
+**Estatísticas:**
+- Total de chaves: 1000
+- Esperado por shard: 333
+- Desvio padrão: 395.12
+- Variância: 156116.33
 
-## Conclusões e Recomendações
+### SimpleHash
 
-### Ranking Final
+**Distribuição por Shard:**
 
-1. **🏆 SHA-512** - Melhor balanço distribuição/segurança
-2. **🥈 SHA-256** - Boa opção para performance/segurança
-3. **🥉 MD5** - Apenas se segurança não for crítica
-4. **❌ FNV-1a** - Inadequado para consistent hashing
+| Shard | Quantidade | Percentual |
+|-------|------------|------------|
+| shard-01 | 1000 | 100.0% |
+| shard-02 | 0 | 0.0% |
+| shard-03 | 0 | 0.0% |
 
-### Recomendações por Cenário
+**Estatísticas:**
+- Total de chaves: 1000
+- Esperado por shard: 333
+- Desvio padrão: 471.40
+- Variância: 222222.33
 
-#### 🎯 **Produção (Recomendado)**
-**Manter SHA-512**
-- Melhor distribuição uniforme (13.7% desvio)
-- Máxima segurança para dados sensíveis
-- Performance aceitável para a maioria dos casos
+## Análise e Recomendações
 
-#### ⚡ **Performance Crítica**
-**Migrar para SHA-256**
-- 2.3x mais rápido que SHA-512
-- Distribuição aceitável (22.3% desvio)
-- Segurança adequada para a maioria dos sistemas
+**Melhor algoritmo:** SHA1
 
-#### 🧪 **Desenvolvimento/Teste**
-**SHA-256 ou MD5**
-- Maior velocidade para ciclos de desenvolvimento
-- MD5 apenas se segurança não for requisito
+**Critérios de avaliação:**
+1. **Menor desvio padrão** - indica distribuição mais uniforme
+2. **Menor variância** - confirma consistência da distribuição
+3. **Menor diferença** entre melhor e pior shard
 
-#### ❌ **Não Recomendado**
-**FNV-1a para Consistent Hashing**
-- Distribuição completamente desigual
-- Pode funcionar para outros tipos de hash tables
-- Inadequado para sharding distribuído
+**Considerações de segurança:**
+- SHA-512 e SHA-256 são criptograficamente seguros
+- MD5 e SHA-1 são considerados deprecados para uso criptográfico
+- FNV64 e SimpleHash são rápidos mas não criptograficamente seguros
 
-### Implementação Sugerida
-
-```go
-// Configuração flexível de algoritmo
-type HashAlgorithm int
-
-const (
-    SHA512 HashAlgorithm = iota  // Produção
-    SHA256                       // Performance/Segurança
-    MD5                          // Desenvolvimento
-)
-
-func (ring *ConsistentHashRing) SetHashAlgorithm(algo HashAlgorithm) {
-    switch algo {
-    case SHA512:
-        ring.hashFunc = hashKeySHA512
-    case SHA256:
-        ring.hashFunc = hashKeySHA256
-    case MD5:
-        ring.hashFunc = hashKeyMD5
-    }
-}
-```
-
-## Considerações Acadêmicas
-
-### Consistent Hashing vs Performance
-Este estudo demonstra que **nem sempre o algoritmo mais rápido é o melhor** para consistent hashing. O FNV-1a, apesar de ser 6.7x mais rápido, produz uma distribuição completamente inadequada.
-
-### Trade-offs Observados
-- **Segurança vs Performance**: SHA-256 oferece 2.3x mais performance com perda aceitável de segurança
-- **Distribuição vs Velocidade**: SHA-512 mantém a melhor distribuição mesmo sendo mais lento
-- **Memória vs Performance**: FNV-1a usa zero alocações mas falha na distribuição
-
-### Implicações para Arquitetura Celular
-- **Isolamento**: Distribuição desigual pode quebrar o isolamento entre células
-- **Scalabilidade**: Algoritmos mal distribuídos criam hotspots
-- **Resiliência**: Concentração de carga prejudica a tolerância a falhas
-
-## Próximos Passos
-
-1. **Configurabilidade**: Implementar seleção dinâmica de algoritmo
-2. **Monitoramento**: Adicionar métricas de distribuição em produção
-3. **Teste de Carga**: Validar resultados com cargas reais
-4. **Número de Réplicas**: Estudar impacto de diferentes números de réplicas virtuais
-
----
-
-*Estudo realizado como parte da pesquisa de Mestrado em Arquitetura Celular*  
-*MSC Shard Router - Setembro 2024*
-
-## Anexo: Dados Brutos
-
-### UUIDs de Teste (Amostra)
-```
-Primeiros 10 UUIDs utilizados nos testes:
-[Lista seria gerada dinamicamente durante o teste]
-```
-
-### Comandos para Reprodução
-```bash
-# Executar teste de distribuição
-go test ./pkg/hashring -v -run TestCompareHashingAlgorithms
-
-# Executar benchmark de performance  
-go test ./pkg/hashring -bench=BenchmarkHashAlgorithms -run=^$ -benchmem
-```
+**Recomendação final:**
+Para aplicações que requerem segurança criptográfica, use **SHA-256** ou **SHA-512**.
+Para aplicações onde a performance é crítica e segurança criptográfica não é necessária, considere **FNV64**.

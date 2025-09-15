@@ -65,6 +65,14 @@ graph TB
 
 ## 🔧 Configuração
 
+### Docker Image 
+
+> Buildx arm64, amd64
+
+```bash
+docker pull ghcr.io/msfidelis/msc-shard-router:latest
+```
+
 ### Variáveis de Ambiente
 
 | Variável | Descrição | Exemplo | Padrão |

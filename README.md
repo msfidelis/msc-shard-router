@@ -67,13 +67,31 @@ graph TB
 
 ### Variáveis de Ambiente
 
-| Variável | Descrição | Exemplo |
-|----------|-----------|---------|
-| `ROUTER_PORT` | Porta do servidor router | `8080` |
-| `SHARDING_KEY` | Nome do header HTTP usado como shard key | `id_client` |
-| `SHARD_01_URL` | URL do primeiro shard | `http://shard01:80` |
-| `SHARD_02_URL` | URL do segundo shard | `http://shard02:80` |
-| `SHARD_N_URL` | URLs adicionais seguindo o padrão | `http://shardN:80` |
+| Variável | Descrição | Exemplo | Padrão |
+|----------|-----------|---------|---------|
+| `ROUTER_PORT` | Porta do servidor router | `8080` | `8080` |
+| `SHARDING_KEY` | Nome do header HTTP usado como shard key | `id_client` | `id_client` |
+| `HASHING_ALGORITHM` | Algoritmo de hash para consistent hashing | `SHA512` | `SHA512` |
+| `SHARD_01_URL` | URL do primeiro shard | `http://shard01:80` | - |
+| `SHARD_02_URL` | URL do segundo shard | `http://shard02:80` | - |
+| `SHARD_N_URL` | URLs adicionais seguindo o padrão | `http://shardN:80` | - |
+
+### Algoritmos de Hash Suportados
+
+| Algoritmo | Variável | Segurança | Performance | Recomendação |
+|-----------|----------|-----------|-------------|--------------|
+| **SHA-512** | `SHA512` | 🔒 Máxima | ⚡ Boa | 🎯 **Produção** |
+| **SHA-256** | `SHA256` | 🔒 Alta | ⚡ Muito Boa | 🚀 **Performance** |
+| **SHA-1** | `SHA1` | ⚠️ Moderada | ⚡ Boa | 🧪 **Legado** |
+| **MD5** | `MD5` | ❌ Baixa | ⚡ Muito Boa | 🧪 **Desenvolvimento** |
+| **Murmur3** | `MURMUR` | ❌ Nenhuma | 🚀 Máxima | ⚡ **Não-criptográfico** |
+
+**Exemplo de configuração:**
+```bash
+export HASHING_ALGORITHM=SHA256  # Para melhor performance
+export HASHING_ALGORITHM=MURMUR  # Para máxima velocidade
+export HASHING_ALGORITHM=SHA512  # Para máxima segurança (padrão)
+```
 
 
 ### Descoberta Dinâmica de Shards

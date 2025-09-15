@@ -1,6 +1,6 @@
 # Makefile para o MSC Shard Router
 
-.PHONY: test test-verbose test-coverage build run clean help docker-build docker-run docker-compose-up docker-compose-down lint security ci
+.PHONY: test test-verbose test-coverage build run clean help docker-build docker-run docker-compose-up docker-compose-down lint security ci test-hash-algorithms
 
 # Configurações
 BINARY_NAME=shard-router
@@ -11,6 +11,7 @@ PORT=8080
 GREEN=\033[0;32m
 YELLOW=\033[0;33m
 RED=\033[0;31m
+BLUE=\033[0;34m
 NC=\033[0m # No Color
 
 help: ## Mostra esta mensagem de ajuda
@@ -85,5 +86,19 @@ security: ## Executa verificações de segurança
 		go install golang.org/x/vuln/cmd/govulncheck@latest; \
 	fi
 	@govulncheck ./...
+
+# Testes de algoritmos de hash
+test-hash-algorithms: ## Testa todos os algoritmos de hash configuráveis
+	@echo "$(GREEN)Testando algoritmos de hash...$(NC)"
+	@go test ./pkg/hashring -v -run TestHashAlgorithmConfiguration
+	@go test ./pkg/hashring -v -run TestHashAlgorithmDistribution
+
+
+# Benchmark de algoritmos
+benchmark-hash: ## Executa benchmark dos algoritmos de hash
+	@echo "$(GREEN)Executando benchmark de algoritmos...$(NC)"
+	@go test ./pkg/hashring -bench=BenchmarkHashAlgorithms -run=^$$ -benchmem
+
+
 
 .DEFAULT_GOAL := help

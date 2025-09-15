@@ -1,6 +1,7 @@
 package hashring
 
 import (
+	"os"
 	"testing"
 )
 
@@ -82,31 +83,8 @@ func TestGetNode(t *testing.T) {
 	}
 }
 
-func TestHashKey(t *testing.T) {
-	// Teste se a função hash é determinística
-	key := "test-key"
-	hash1 := hashKey(key)
-	hash2 := hashKey(key)
-
-	if hash1 != hash2 {
-		t.Error("hashKey should be deterministic")
-	}
-
-	// Teste se diferentes chaves produzem hashes diferentes (na maioria dos casos)
-	hash3 := hashKey("different-key")
-	if hash1 == hash3 {
-		t.Error("Different keys should generally produce different hashes")
-	}
-
-	// Teste case-insensitive
-	hash4 := hashKey("TEST-KEY")
-	hash5 := hashKey("test-key")
-	if hash4 != hash5 {
-		t.Error("hashKey should be case-insensitive")
-	}
-}
-
 func TestDistribution(t *testing.T) {
+	os.Setenv("HASHING_ALGORITHM", "SHA1")
 	ring := NewConsistentHashRing(3)
 
 	// Adicionar 3 shards
@@ -114,7 +92,6 @@ func TestDistribution(t *testing.T) {
 	for _, shard := range shards {
 		ring.AddNode(shard)
 	}
-
 	// Testar distribuição com muitas chaves
 	distribution := make(map[string]int)
 	numKeys := 1000
@@ -148,4 +125,5 @@ func TestDistribution(t *testing.T) {
 	}
 
 	t.Logf("Distribution: %v", distribution)
+	os.Unsetenv("HASHING_ALGORITHM")
 }

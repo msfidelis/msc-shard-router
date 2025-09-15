@@ -11,6 +11,11 @@ type MockHashRing struct {
 	getNodeFunc func(key string) string
 }
 
+// Add GetHashAlgorithm method to satisfy the interface
+func (m *MockHashRing) GetHashAlgorithm() string {
+	return "SHA256"
+}
+
 func (m *MockHashRing) AddNode(nodeID string) {
 	if m.nodes == nil {
 		m.nodes = make(map[string]bool)

@@ -57,6 +57,10 @@ func NewConsistentHashRing(numReplicas int) interfaces.HashRing {
 	return ring
 }
 
+func (ring *ConsistentHashRing) GetHashAlgorithm() string {
+	return ring.HashAlgorithm
+}
+
 // configureHashAlgorithm configura o algoritmo de hash baseado na variável HASHING_ALGORITHM
 func (ring *ConsistentHashRing) configureHashAlgorithm() {
 	algorithm := HashAlgorithm(strings.ToUpper(os.Getenv("HASHING_ALGORITHM")))
@@ -85,7 +89,9 @@ func (ring *ConsistentHashRing) configureHashAlgorithm() {
 		} else {
 			log.Printf("No HASHING_ALGORITHM specified, defaulting to SHA512")
 		}
+		algorithm = "SHA512"
 	}
+	ring.HashAlgorithm = string(algorithm)
 }
 
 // AddNode adiciona um nó ao hash ring com múltiplas réplicas virtuais
@@ -142,11 +148,6 @@ func hashKeySHA512(s string) uint64 {
 func hashKeyMurmur3(s string) uint64 {
 	s = strings.ToLower(s)
 	return murmur3.Sum64([]byte(s))
-}
-
-// hashKey mantém compatibilidade com código legado (usa SHA512)
-func hashKey(s string) uint64 {
-	return hashKeySHA512(s)
 }
 
 // GetNode retorna o node onde o Tenant deverá estar alocado

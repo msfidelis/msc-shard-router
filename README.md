@@ -71,7 +71,7 @@ graph TB
 |----------|-----------|---------|---------|
 | `ROUTER_PORT` | Porta do servidor router | `8080` | `8080` |
 | `SHARDING_KEY` | Nome do header HTTP usado como shard key | `id_client` | `id_client` |
-| `HASHING_ALGORITHM` | Algoritmo de hash para consistent hashing | `SHA512` | `SHA512` |
+| `HASHING_ALGORITHM` | Algoritmo de hash para consistent hashing | `SHA1, SHA256, SHA512, MURMUR3` | `SHA512` |
 | `SHARD_01_URL` | URL do primeiro shard | `http://shard01:80` | - |
 | `SHARD_02_URL` | URL do segundo shard | `http://shard02:80` | - |
 | `SHARD_N_URL` | URLs adicionais seguindo o padrão | `http://shardN:80` | - |

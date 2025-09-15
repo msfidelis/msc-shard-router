@@ -52,7 +52,7 @@ func (sr *ShardRouterImpl) GetShardHost(key string) string {
 		panic("Hash ring not initialized. Call InitHashRing first.")
 	}
 	node := sr.hashRing.GetNode(key)
-	fmt.Printf("HashFunc %s: Mapping sharding key %s to host: %s\n", key, node)
+	fmt.Printf("[%s] Mapping sharding key %s to host: %s\n", sr.hashRing.GetHashAlgorithm(), key, node)
 	return node
 }
 

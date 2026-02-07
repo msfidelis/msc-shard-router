@@ -15,6 +15,17 @@ const (
 	StateHalfOpen
 )
 
+func (s State) String() string {
+	switch s {
+	case StateOpen:
+		return "open"
+	case StateHalfOpen:
+		return "half_open"
+	default:
+		return "closed"
+	}
+}
+
 type Config struct {
 	FailureThreshold         int
 	OpenTimeout              time.Duration
@@ -78,6 +89,12 @@ func NewCircuitBreaker(cfg Config) *CircuitBreaker {
 		cfg:   cfg,
 		state: StateClosed,
 	}
+}
+
+func (cb *CircuitBreaker) State() State {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	return cb.state
 }
 
 func (cb *CircuitBreaker) Allow() bool {

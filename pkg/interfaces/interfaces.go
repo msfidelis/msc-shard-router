@@ -39,4 +39,5 @@ type ProxyHandler interface {
 type MetricsRecorder interface {
 	RecordRequest(shard string)
 	RecordResponse(shard string, statusCode int)
+	RecordCircuitState(shard string, state string)
 }

@@ -28,6 +28,7 @@ type ProxyServer struct {
 type PrometheusMetricsRecorder struct {
 	requestsCounter prometheus.CounterVec
 	responseCounter prometheus.CounterVec
+	breakerState    prometheus.GaugeVec
 }
 
 // Garantir que PrometheusMetricsRecorder implementa a interface
@@ -39,6 +40,17 @@ func (pm *PrometheusMetricsRecorder) RecordRequest(shard string) {
 
 func (pm *PrometheusMetricsRecorder) RecordResponse(shard string, statusCode int) {
 	pm.responseCounter.WithLabelValues(shard, strconv.Itoa(statusCode)).Inc()
+}
+
+func (pm *PrometheusMetricsRecorder) RecordCircuitState(shard string, state string) {
+	states := []string{"closed", "open", "half_open"}
+	for _, candidate := range states {
+		value := 0.0
+		if candidate == state {
+			value = 1.0
+		}
+		pm.breakerState.WithLabelValues(shard, candidate).Set(value)
+	}
 }
 
 // NewPrometheusMetricsRecorder cria uma nova instância do recorder de métricas
@@ -57,10 +69,18 @@ func NewPrometheusMetricsRecorder() *PrometheusMetricsRecorder {
 		},
 		[]string{"shard", "status"},
 	)
+	breakerState := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "shard_router_circuit_state",
+			Help: "Circuit breaker state by shard (0=inactive,1=active)",
+		},
+		[]string{"shard", "state"},
+	)
 
 	return &PrometheusMetricsRecorder{
 		requestsCounter: *requestsCounter,
 		responseCounter: *responseCounter,
+		breakerState:    *breakerState,
 	}
 }
 
@@ -100,14 +120,15 @@ func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !breaker.Allow() {
 		ph.metricsRecorder.RecordRequest(shardURL)
 		ph.metricsRecorder.RecordResponse(shardURL, http.StatusServiceUnavailable)
+		ph.metricsRecorder.RecordCircuitState(shardURL, breaker.State().String())
 		http.Error(w, "Shard temporarily unavailable", http.StatusServiceUnavailable)
 		return
 	}
 
 	targetURL, err := url.Parse(shardURL + r.URL.Path)
 	if err != nil {
-		breaker.RecordFailure()
 		http.Error(w, "Invalid target URL", http.StatusBadRequest)
+		ph.metricsRecorder.RecordCircuitState(shardURL, breaker.State().String())
 		return
 	}
 
@@ -115,6 +136,9 @@ func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	proxyReq, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
 	if err != nil {
+		breaker.RecordFailure()
+		ph.metricsRecorder.RecordResponse(shardURL, http.StatusInternalServerError)
+		ph.metricsRecorder.RecordCircuitState(shardURL, breaker.State().String())
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
 	}
@@ -125,6 +149,7 @@ func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		breaker.RecordFailure()
 		ph.metricsRecorder.RecordResponse(shardURL, http.StatusBadGateway)
+		ph.metricsRecorder.RecordCircuitState(shardURL, breaker.State().String())
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
@@ -141,6 +166,7 @@ func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ph.metricsRecorder.RecordResponse(shardURL, resp.StatusCode)
+	ph.metricsRecorder.RecordCircuitState(shardURL, breaker.State().String())
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
@@ -188,6 +214,7 @@ func (ps *ProxyServer) Start() error {
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 		&prometheusRecorder.requestsCounter,
 		&prometheusRecorder.responseCounter,
+		&prometheusRecorder.breakerState,
 	)
 
 	// Setup dos handlers

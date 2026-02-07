@@ -99,6 +99,74 @@ benchmark-hash: ## Executa benchmark dos algoritmos de hash
 	@echo "$(GREEN)Executando benchmark de algoritmos...$(NC)"
 	@go test ./pkg/hashring -bench=BenchmarkHashAlgorithms -run=^$$ -benchmem
 
+# Benchmarks de distribuição para mestrado
+benchmark-quick: ## Benchmark rápido (3,5,10 shards)
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@echo "$(BLUE)  BENCHMARK RÁPIDO - ARQUITETURA CELULAR$(NC)"
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@go run cmd/hashing-distribution/main.go examples/hashing-test/1kk_uuids.txt \
+		-shards=3,5,10 \
+		-replicas=150 \
+		-csv=benchmark-results/quick_$$(date +%Y%m%d_%H%M%S).csv \
+		-md=benchmark-results/quick_$$(date +%Y%m%d_%H%M%S).md \
+		-verbose
+
+benchmark-medium: ## Benchmark médio (10,25,50 shards)
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@echo "$(BLUE)  BENCHMARK MÉDIO - ARQUITETURA CELULAR$(NC)"
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@go run cmd/hashing-distribution/main.go examples/hashing-test/1kk_uuids.txt \
+		-shards=10,25,50 \
+		-replicas=150 \
+		-csv=benchmark-results/medium_$$(date +%Y%m%d_%H%M%S).csv \
+		-md=benchmark-results/medium_$$(date +%Y%m%d_%H%M%S).md \
+		-verbose
+
+benchmark-advanced: ## Benchmark avançado (50,100,200 shards)
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@echo "$(BLUE)  BENCHMARK AVANÇADO - ARQUITETURA CELULAR$(NC)"
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@go run cmd/hashing-distribution/main.go examples/hashing-test/1kk_uuids.txt \
+		-shards=50,100,200 \
+		-replicas=150 \
+		-csv=benchmark-results/advanced_$$(date +%Y%m%d_%H%M%S).csv \
+		-md=benchmark-results/advanced_$$(date +%Y%m%d_%H%M%S).md
+
+benchmark-complete: ## Benchmark completo para dissertação (3,5,10,25,50,100,200)
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@echo "$(BLUE)  BENCHMARK COMPLETO - DISSERTAÇÃO$(NC)"
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@mkdir -p benchmark-results
+	@go run cmd/hashing-distribution/main.go examples/hashing-test/1kk_uuids.txt \
+		-shards=3,5,10,25,50,100,200 \
+		-replicas=200 \
+		-csv=benchmark-results/complete_$$(date +%Y%m%d_%H%M%S).csv \
+		-md=benchmark-results/complete_$$(date +%Y%m%d_%H%M%S).md \
+		-verbose
+
+benchmark-full: ## Executa todos os benchmarks sequencialmente
+	@echo "$(GREEN)Executando suite completa de benchmarks...$(NC)"
+	@chmod +x scripts/run-benchmark.sh
+	@./scripts/run-benchmark.sh
+
+generate-uuids: ## Gera arquivo com 1 milhão de UUIDs v4
+	@echo "$(GREEN)Gerando 1 milhão de UUIDs v4...$(NC)"
+	@cd examples/hashing-test && go run generate_uuids.go
+	@echo "$(GREEN)✓ UUIDs gerados em examples/hashing-test/1kk_uuids.txt$(NC)"
+
+benchmark-check: ## Verifica se UUIDs existem, senão gera
+	@if [ ! -f examples/hashing-test/1kk_uuids.txt ]; then \
+		echo "$(YELLOW)⚠ Arquivo de UUIDs não encontrado$(NC)"; \
+		$(MAKE) generate-uuids; \
+	else \
+		echo "$(GREEN)✓ Arquivo de UUIDs encontrado$(NC)"; \
+	fi
+
+benchmark-clean: ## Remove resultados antigos de benchmark
+	@echo "$(YELLOW)Removendo resultados antigos...$(NC)"
+	@rm -rf benchmark-results/*
+	@echo "$(GREEN)✓ Resultados removidos$(NC)"
+
 
 
 .DEFAULT_GOAL := help

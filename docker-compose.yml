@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: cosmtrek/air:v1.63.0
+    image: cosmtrek/air:v1.64.4
     working_dir: /app
     volumes:
       - ./:/app

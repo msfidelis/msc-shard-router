@@ -16,15 +16,15 @@ const (
 )
 
 type Config struct {
-	FailureThreshold        int
-	OpenTimeout             time.Duration
+	FailureThreshold         int
+	OpenTimeout              time.Duration
 	HalfOpenSuccessThreshold int
 }
 
 func DefaultConfig() Config {
 	return Config{
-		FailureThreshold:        5,
-		OpenTimeout:             30 * time.Second,
+		FailureThreshold:         5,
+		OpenTimeout:              30 * time.Second,
 		HalfOpenSuccessThreshold: 2,
 	}
 }
@@ -54,13 +54,13 @@ func ConfigFromEnv() Config {
 }
 
 type CircuitBreaker struct {
-	mu                 sync.Mutex
-	cfg                Config
-	state              State
-	failures           int
-	openedAt           time.Time
-	halfOpenInFlight   bool
-	halfOpenSuccesses  int
+	mu                sync.Mutex
+	cfg               Config
+	state             State
+	failures          int
+	openedAt          time.Time
+	halfOpenInFlight  bool
+	halfOpenSuccesses int
 }
 
 func NewCircuitBreaker(cfg Config) *CircuitBreaker {

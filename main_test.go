@@ -56,6 +56,10 @@ func (m *MockMetricsRecorder) RecordResponse(shard string, statusCode int) {
 	m.responses[shard][statusCode]++
 }
 
+func (m *MockMetricsRecorder) RecordCircuitState(shard string, state string) {
+	// No-op for tests
+}
+
 func TestNewPrometheusMetricsRecorder(t *testing.T) {
 	recorder := NewPrometheusMetricsRecorder()
 

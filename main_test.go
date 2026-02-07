@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
@@ -298,5 +299,52 @@ func TestProxyHandler_HTTPMethods(t *testing.T) {
 				t.Errorf("Expected status 200 for method %s, got %d", method, rr.Code)
 			}
 		})
+	}
+}
+
+func TestProxyHandler_CircuitBreakerOpen(t *testing.T) {
+	oldFailureThreshold := os.Getenv("CB_FAILURE_THRESHOLD")
+	oldOpenTimeout := os.Getenv("CB_OPEN_TIMEOUT_SEC")
+	oldHalfOpenSuccess := os.Getenv("CB_HALF_OPEN_SUCCESS_THRESHOLD")
+	defer func() {
+		os.Setenv("CB_FAILURE_THRESHOLD", oldFailureThreshold)
+		os.Setenv("CB_OPEN_TIMEOUT_SEC", oldOpenTimeout)
+		os.Setenv("CB_HALF_OPEN_SUCCESS_THRESHOLD", oldHalfOpenSuccess)
+	}()
+
+	os.Setenv("CB_FAILURE_THRESHOLD", "1")
+	os.Setenv("CB_OPEN_TIMEOUT_SEC", "60")
+	os.Setenv("CB_HALF_OPEN_SUCCESS_THRESHOLD", "1")
+
+	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("boom"))
+	}))
+	defer backendServer.Close()
+
+	mockRouter := &MockShardRouter{
+		shardingKey:   "user_id",
+		expectedShard: backendServer.URL,
+	}
+
+	mockRecorder := NewMockMetricsRecorder()
+	handler := NewProxyHandler(mockRouter, mockRecorder)
+
+	firstReq := httptest.NewRequest("GET", "/test", nil)
+	firstReq.Header.Set("user_id", "test-user")
+	firstResp := httptest.NewRecorder()
+
+	handler.ServeHTTP(firstResp, firstReq)
+	if firstResp.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500 on first request, got %d", firstResp.Code)
+	}
+
+	secondReq := httptest.NewRequest("GET", "/test", nil)
+	secondReq.Header.Set("user_id", "test-user")
+	secondResp := httptest.NewRecorder()
+
+	handler.ServeHTTP(secondResp, secondReq)
+	if secondResp.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503 after breaker opens, got %d", secondResp.Code)
 	}
 }

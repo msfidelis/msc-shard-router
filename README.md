@@ -83,6 +83,9 @@ docker pull ghcr.io/msfidelis/msc-shard-router:latest
 | `SHARD_01_URL` | URL do primeiro shard | `http://shard01:80` | - |
 | `SHARD_02_URL` | URL do segundo shard | `http://shard02:80` | - |
 | `SHARD_N_URL` | URLs adicionais seguindo o padrão | `http://shardN:80` | - |
+| `CB_FAILURE_THRESHOLD` | Falhas consecutivas para abrir o circuito | `5` | `5` |
+| `CB_OPEN_TIMEOUT_SEC` | Tempo em segundos para tentar half-open | `30` | `30` |
+| `CB_HALF_OPEN_SUCCESS_THRESHOLD` | Sucessos consecutivos em half-open para fechar | `2` | `2` |
 
 ### Algoritmos de Hash Suportados
 
@@ -366,7 +369,7 @@ type ConfigManager interface {
 - **Interface Segregation**: Interfaces pequenas e focadas
 
 
-## 🚀 Execução Local
+## Execução Local
 
 ### Docker Compose (Recomendado)
 

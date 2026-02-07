@@ -1,6 +1,7 @@
 package main
 
 import (
+	"app/pkg/circuitbreaker"
 	"app/pkg/interfaces"
 	"app/pkg/setup"
 	"app/pkg/sharding"
@@ -84,6 +85,7 @@ func NewProxyServer(port string) *ProxyServer {
 type ProxyHandler struct {
 	router          interfaces.ShardRouter
 	metricsRecorder interfaces.MetricsRecorder
+	breakers        *circuitbreaker.ShardManager
 }
 
 // Garantir que ProxyHandler implementa a interface
@@ -94,8 +96,17 @@ func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	shardKey := ph.router.GetShardingKey(r)
 	shardURL := ph.router.GetShardHost(shardKey)
 
+	breaker := ph.breakers.ForShard(shardURL)
+	if !breaker.Allow() {
+		ph.metricsRecorder.RecordRequest(shardURL)
+		ph.metricsRecorder.RecordResponse(shardURL, http.StatusServiceUnavailable)
+		http.Error(w, "Shard temporarily unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
 	targetURL, err := url.Parse(shardURL + r.URL.Path)
 	if err != nil {
+		breaker.RecordFailure()
 		http.Error(w, "Invalid target URL", http.StatusBadRequest)
 		return
 	}
@@ -112,6 +123,8 @@ func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	client := &http.Client{}
 	resp, err := client.Do(proxyReq)
 	if err != nil {
+		breaker.RecordFailure()
+		ph.metricsRecorder.RecordResponse(shardURL, http.StatusBadGateway)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
@@ -119,6 +132,12 @@ func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	for k, v := range resp.Header {
 		w.Header()[k] = v
+	}
+
+	if resp.StatusCode >= http.StatusInternalServerError {
+		breaker.RecordFailure()
+	} else {
+		breaker.RecordSuccess()
 	}
 
 	ph.metricsRecorder.RecordResponse(shardURL, resp.StatusCode)
@@ -132,6 +151,7 @@ func NewProxyHandler(router interfaces.ShardRouter, metricsRecorder interfaces.M
 	return &ProxyHandler{
 		router:          router,
 		metricsRecorder: metricsRecorder,
+		breakers:        circuitbreaker.NewShardManager(circuitbreaker.ConfigFromEnv()),
 	}
 }
 

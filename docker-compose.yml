@@ -16,7 +16,9 @@ services:
       - SHARD_01_URL=http://shard01:80
       - SHARD_02_URL=http://shard02:80
       - SHARD_03_URL=http://shard03:80
-
+      - CB_FAILURE_THRESHOLD=10
+      - CB_OPEN_TIMEOUT_SEC=30
+      - CB_HALF_OPEN_SUCCESS_THRESHOLD=2
   shard01:
     image: nginx:alpine
     ports:

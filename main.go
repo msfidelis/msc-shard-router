@@ -230,7 +230,7 @@ func (ps *ProxyServer) Start() error {
 }
 
 func main() {
-	port := os.Getenv("ROUTER_PORT")
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}

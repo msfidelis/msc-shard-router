@@ -77,7 +77,7 @@ docker pull ghcr.io/msfidelis/msc-shard-router:latest
 
 | Variável | Descrição | Exemplo | Padrão |
 |----------|-----------|---------|---------|
-| `ROUTER_PORT` | Porta do servidor router | `8080` | `8080` |
+| `PORT` | Porta do servidor router | `8080` | `8080` |
 | `SHARDING_KEY` | Nome do header HTTP usado como shard key | `id_client` | `id_client` |
 | `HASHING_ALGORITHM` | Algoritmo de hash para consistent hashing | `SHA1, SHA256, SHA512, MURMUR3` | `SHA512` |
 | `SHARD_01_URL` | URL do primeiro shard | `http://shard01:80` | - |
@@ -392,7 +392,7 @@ go mod tidy
 go build -o shard-router .
 
 # Configuração das variáveis
-export ROUTER_PORT=8080
+export PORT=8080
 export SHARDING_KEY=id_client
 export SHARD_01_URL=http://localhost:8081
 export SHARD_02_URL=http://localhost:8082

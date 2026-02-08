@@ -174,10 +174,18 @@ func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // NewProxyHandler cria um novo handler de proxy
 func NewProxyHandler(router interfaces.ShardRouter, metricsRecorder interfaces.MetricsRecorder) *ProxyHandler {
+	cbConfig := circuitbreaker.ConfigFromEnv()
+	log.Printf(
+		"Circuit breaker config: failure_threshold=%d open_timeout_sec=%d half_open_success_threshold=%d",
+		cbConfig.FailureThreshold,
+		int(cbConfig.OpenTimeout.Seconds()),
+		cbConfig.HalfOpenSuccessThreshold,
+	)
+
 	return &ProxyHandler{
 		router:          router,
 		metricsRecorder: metricsRecorder,
-		breakers:        circuitbreaker.NewShardManager(circuitbreaker.ConfigFromEnv()),
+		breakers:        circuitbreaker.NewShardManager(cbConfig),
 	}
 }
 

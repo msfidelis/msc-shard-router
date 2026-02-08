@@ -313,7 +313,7 @@ jobs:
       - name: Run integration tests
         run: |
           # Start the application in background
-          export ROUTER_PORT=9090
+          export PORT=9090
           export SHARDING_KEY=id_client
           export SHARD_01_URL=http://localhost:8081
           export SHARD_02_URL=http://localhost:8082

@@ -222,7 +222,7 @@ cat > .env.development << 'EOF'
 # Copy to .env and modify as needed
 
 # Router Configuration
-ROUTER_PORT=8080
+PORT=8080
 SHARDING_KEY=id_client
 
 # Shard URLs (add more as needed)

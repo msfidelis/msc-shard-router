@@ -14,6 +14,7 @@ type HashRing interface {
 type ShardRouter interface {
 	GetShardingKey(r *http.Request) string
 	GetShardHost(key string) string
+	GetShuffleHosts(key string) []string
 	InitHashRing(size int)
 	AddShard(shardHost string)
 }

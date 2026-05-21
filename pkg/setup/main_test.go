@@ -36,6 +36,14 @@ func (m *MockShardRouter) GetShardHost(key string) string {
 	return ""
 }
 
+func (m *MockShardRouter) GetShuffleHosts(key string) []string {
+	node := m.GetShardHost(key)
+	if node == "" {
+		return nil
+	}
+	return []string{node}
+}
+
 // Garantir que MockShardRouter implementa a interface
 var _ interfaces.ShardRouter = (*MockShardRouter)(nil)
 

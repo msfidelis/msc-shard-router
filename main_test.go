@@ -10,10 +10,11 @@ import (
 
 // MockShardRouter para testes do main
 type MockShardRouter struct {
-	shardingKey   string
-	expectedShard string
-	initCalled    bool
-	shardsAdded   []string
+	shardingKey      string
+	expectedShard    string
+	shuffleCandidates []string
+	initCalled       bool
+	shardsAdded      []string
 }
 
 func (m *MockShardRouter) InitHashRing(size int) {
@@ -29,7 +30,21 @@ func (m *MockShardRouter) GetShardingKey(r *http.Request) string {
 }
 
 func (m *MockShardRouter) GetShardHost(key string) string {
-	return m.expectedShard
+	hosts := m.GetShuffleHosts(key)
+	if len(hosts) == 0 {
+		return ""
+	}
+	return hosts[0]
+}
+
+func (m *MockShardRouter) GetShuffleHosts(key string) []string {
+	if len(m.shuffleCandidates) > 0 {
+		return m.shuffleCandidates
+	}
+	if m.expectedShard == "" {
+		return nil
+	}
+	return []string{m.expectedShard}
 }
 
 // MockMetricsRecorder para testes
@@ -350,5 +365,56 @@ func TestProxyHandler_CircuitBreakerOpen(t *testing.T) {
 	handler.ServeHTTP(secondResp, secondReq)
 	if secondResp.Code != http.StatusServiceUnavailable {
 		t.Errorf("Expected status 503 after breaker opens, got %d", secondResp.Code)
+	}
+}
+
+func TestProxyHandler_ShuffleFallback(t *testing.T) {
+	os.Setenv("CB_FAILURE_THRESHOLD", "1")
+	os.Setenv("CB_OPEN_TIMEOUT_SEC", "60")
+	defer func() {
+		os.Unsetenv("CB_FAILURE_THRESHOLD")
+		os.Unsetenv("CB_OPEN_TIMEOUT_SEC")
+	}()
+
+	// primaryServer retorna 500 para abrir o circuit breaker
+	primaryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer primaryServer.Close()
+
+	// fallbackServer responde 200
+	fallbackServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("fallback ok"))
+	}))
+	defer fallbackServer.Close()
+
+	mockRouter := &MockShardRouter{
+		shardingKey:       "user_id",
+		shuffleCandidates: []string{primaryServer.URL, fallbackServer.URL},
+	}
+
+	mockRecorder := NewMockMetricsRecorder()
+	handler := NewProxyHandler(mockRouter, mockRecorder)
+
+	// Primeira request: vai para o primary e retorna 500, abrindo o circuit breaker
+	req1 := httptest.NewRequest("GET", "/test", nil)
+	req1.Header.Set("user_id", "test-user")
+	resp1 := httptest.NewRecorder()
+	handler.ServeHTTP(resp1, req1)
+	if resp1.Code != http.StatusInternalServerError {
+		t.Fatalf("Expected 500 on first request, got %d", resp1.Code)
+	}
+
+	// Segunda request: circuit breaker do primary está aberto, deve cair no fallback
+	req2 := httptest.NewRequest("GET", "/test", nil)
+	req2.Header.Set("user_id", "test-user")
+	resp2 := httptest.NewRecorder()
+	handler.ServeHTTP(resp2, req2)
+	if resp2.Code != http.StatusOK {
+		t.Errorf("Expected 200 after fallback to second candidate, got %d", resp2.Code)
+	}
+	if resp2.Body.String() != "fallback ok" {
+		t.Errorf("Expected 'fallback ok', got '%s'", resp2.Body.String())
 	}
 }

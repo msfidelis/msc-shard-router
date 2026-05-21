@@ -114,13 +114,34 @@ var _ interfaces.ProxyHandler = (*ProxyHandler)(nil)
 // ServeHTTP implementa o handler HTTP para o proxy
 func (ph *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	shardKey := ph.router.GetShardingKey(r)
-	shardURL := ph.router.GetShardHost(shardKey)
+	candidates := ph.router.GetShuffleHosts(shardKey)
 
-	breaker := ph.breakers.ForShard(shardURL)
-	if !breaker.Allow() {
-		ph.metricsRecorder.RecordRequest(shardURL)
-		ph.metricsRecorder.RecordResponse(shardURL, http.StatusServiceUnavailable)
-		ph.metricsRecorder.RecordCircuitState(shardURL, breaker.State().String())
+	if len(candidates) == 0 {
+		http.Error(w, "No shards available", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Itera os candidatos do shuffle shard em ordem, usando o primeiro
+	// cujo circuit breaker permita o request.
+	var shardURL string
+	var breaker *circuitbreaker.CircuitBreaker
+	for _, candidate := range candidates {
+		cb := ph.breakers.ForShard(candidate)
+		if cb.Allow() {
+			shardURL = candidate
+			breaker = cb
+			break
+		}
+		log.Printf("circuit open for %s, trying next shuffle shard candidate", candidate)
+		ph.metricsRecorder.RecordCircuitState(candidate, cb.State().String())
+	}
+
+	if shardURL == "" {
+		primary := candidates[0]
+		cb := ph.breakers.ForShard(primary)
+		ph.metricsRecorder.RecordRequest(primary)
+		ph.metricsRecorder.RecordResponse(primary, http.StatusServiceUnavailable)
+		ph.metricsRecorder.RecordCircuitState(primary, cb.State().String())
 		http.Error(w, "Shard temporarily unavailable", http.StatusServiceUnavailable)
 		return
 	}

@@ -6,6 +6,7 @@ import "net/http"
 type HashRing interface {
 	AddNode(nodeID string)
 	GetNode(key string) string
+	GetShuffle(key string) []string
 	GetHashAlgorithm() string
 }
 
@@ -13,6 +14,7 @@ type HashRing interface {
 type ShardRouter interface {
 	GetShardingKey(r *http.Request) string
 	GetShardHost(key string) string
+	GetShuffleHosts(key string) []string
 	InitHashRing(size int)
 	AddShard(shardHost string)
 }

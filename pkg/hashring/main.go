@@ -169,4 +169,57 @@ func (ring *ConsistentHashRing) GetNode(key string) string {
 	return ring.Nodes[idx].ID
 }
 
+// GetShuffle retorna uma lista determinística de k nós físicos para uma chave.
+// k é lido da variável de ambiente SHUFFLE_REPLICAS. Se não configurada ou inválida,
+// retorna apenas o nó primário (comportamento idêntico ao GetNode).
+func (ring *ConsistentHashRing) GetShuffle(key string) []string {
+	if len(ring.Nodes) == 0 {
+		return nil
+	}
+
+	k, err := strconv.Atoi(os.Getenv("SHUFFLE_REPLICAS"))
+	if err != nil || k <= 0 {
+		node := ring.GetNode(key)
+		if node == "" {
+			return nil
+		}
+		return []string{node}
+	}
+
+	uniqueCount := ring.countUniqueNodes()
+	if k > uniqueCount {
+		k = uniqueCount
+	}
+
+	hash := ring.hashFunc(key)
+	idx := sort.Search(len(ring.Nodes), func(i int) bool {
+		return ring.Nodes[i].Hash >= hash
+	})
+	if idx == len(ring.Nodes) {
+		idx = 0
+	}
+
+	selected := make([]string, 0, k)
+	seen := make(map[string]bool)
+
+	for len(selected) < k {
+		node := ring.Nodes[idx%len(ring.Nodes)]
+		if !seen[node.ID] {
+			selected = append(selected, node.ID)
+			seen[node.ID] = true
+		}
+		idx++
+	}
+
+	return selected
+}
+
+func (ring *ConsistentHashRing) countUniqueNodes() int {
+	seen := make(map[string]bool)
+	for _, n := range ring.Nodes {
+		seen[n.ID] = true
+	}
+	return len(seen)
+}
+
 // Exemplos do artigo: https://fidelissauro.dev/sharding/

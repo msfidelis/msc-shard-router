@@ -6,6 +6,7 @@ import "net/http"
 type HashRing interface {
 	AddNode(nodeID string)
 	GetNode(key string) string
+	GetShuffle(key string) []string
 	GetHashAlgorithm() string
 }
 

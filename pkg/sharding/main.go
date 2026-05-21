@@ -51,9 +51,12 @@ func (sr *ShardRouterImpl) GetShardHost(key string) string {
 	if sr.hashRing == nil {
 		panic("Hash ring not initialized. Call InitHashRing first.")
 	}
-	node := sr.hashRing.GetNode(key)
-	fmt.Printf("[%s] Mapping sharding key %s to host: %s\n", sr.hashRing.GetHashAlgorithm(), key, node)
-	return node
+	hosts := sr.hashRing.GetShuffle(key)
+	if len(hosts) == 0 {
+		return ""
+	}
+	fmt.Printf("[%s] shuffle shard key=%s candidates=%v routing_to=%s\n", sr.hashRing.GetHashAlgorithm(), key, hosts, hosts[0])
+	return hosts[0]
 }
 
 // createHashRing é uma função auxiliar para criar o hash ring

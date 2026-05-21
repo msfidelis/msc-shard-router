@@ -38,6 +38,14 @@ func (m *MockHashRing) GetNode(key string) string {
 	return ""
 }
 
+func (m *MockHashRing) GetShuffle(key string) []string {
+	node := m.GetNode(key)
+	if node == "" {
+		return nil
+	}
+	return []string{node}
+}
+
 func TestNewShardRouter(t *testing.T) {
 	shardingKey := "user_id"
 	router := NewShardRouter(shardingKey)

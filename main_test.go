@@ -10,11 +10,11 @@ import (
 
 // MockShardRouter para testes do main
 type MockShardRouter struct {
-	shardingKey      string
-	expectedShard    string
+	shardingKey       string
+	expectedShard     string
 	shuffleCandidates []string
-	initCalled       bool
-	shardsAdded      []string
+	initCalled        bool
+	shardsAdded       []string
 }
 
 func (m *MockShardRouter) InitHashRing(size int) {
